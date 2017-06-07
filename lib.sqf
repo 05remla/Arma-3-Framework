@@ -1,3 +1,6 @@
+/*
+	o5-framework lib
+*/
     fnc_get_vehicles_by_faction =
     {
         private["_type","_faction","_vehicle_array","_vehicle_temp_array","_condition"];
