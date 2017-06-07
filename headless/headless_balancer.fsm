@@ -1,0 +1,412 @@
+/*%FSM<COMPILE "scriptedFSM.cfg, headless_balancer.fsm">*/
+/*%FSM<HEAD>*/
+/*
+item0[] = {"INIT",0,4346,-61.925842,-243.849213,53.322083,-177.782410,0.000000,"INIT"};
+item1[] = {"START_PAUSE",4,218,-75.873123,-153.908768,46.330856,-87.657318,0.000000,"START PAUSE"};
+item2[] = {"__RE_SET_VARIABL",2,250,-130.524979,-50.131180,2.113174,6.595856,0.000000,"(RE)SET VARIABLES"};
+item3[] = {"CLEAR_SERVER",4,218,92.457924,-30.185242,229.444641,52.845306,2.000000,"CLEAR SERVER"};
+item4[] = {"LOCALITY_CHECK",2,250,93.288010,172.065674,215.333496,221.150833,0.000000,"LOCALITY CHECK"};
+item5[] = {"XFER",4,218,81.224487,296.170776,183.640198,369.001160,2.000000,"XFER"};
+item6[] = {"___ITER",2,250,-243.528046,231.069244,-145.446365,271.087738,0.000000,"+ ITER"};
+item7[] = {"CYCLE_WAIT",4,218,-247.751175,63.501678,-124.078583,133.587280,0.000000,"CYCLE WAIT"};
+item8[] = {"DONT_CLEAR",8,218,17.899567,37.858521,123.865631,107.702789,1.000000,"DONT CLEAR"};
+item9[] = {"NO_XFER",8,218,-51.133820,244.930222,60.073578,312.395050,1.000000,"NO XFER"};
+item10[] = {"XFER_INIT",2,250,-68.716644,379.898102,21.283386,429.898132,0.000000,"XFER INIT"};
+item11[] = {"ROOM_FOR_XFERING",4,218,36.333130,458.256683,179.975281,548.176392,2.000000,"ROOM FOR XFERING"};
+item12[] = {"XFER_GROUPS",2,250,-59.883240,582.981384,30.116776,632.981384,0.000000,"XFER GROUPS"};
+item13[] = {"TRUE",8,218,-191.735352,495.080017,-101.735352,545.080017,0.000000,"TRUE"};
+item14[] = {"NO_MORE_ROOM",8,218,-290.747589,354.026886,-156.796906,423.032593,1.000000,"NO MORE ROOM"};
+link0[] = {0,1};
+link1[] = {1,2};
+link2[] = {2,3};
+link3[] = {2,8};
+link4[] = {3,4};
+link5[] = {4,5};
+link6[] = {4,9};
+link7[] = {5,10};
+link8[] = {6,7};
+link9[] = {7,2};
+link10[] = {8,4};
+link11[] = {9,6};
+link12[] = {10,11};
+link13[] = {10,14};
+link14[] = {11,12};
+link15[] = {12,13};
+link16[] = {13,10};
+link17[] = {14,6};
+globals[] = {0.000000,0,0,0,0,640,480,1,23,6316128,1,-827.656189,891.386658,709.962646,-337.929932,1256,885,1};
+window[] = {2,-1,-1,-1,-1,951,225,1607,225,3,1274};
+*//*%FSM</HEAD>*/
+class FSM
+{
+        fsmName = "headless_balancer.fsm";
+        class States
+        {
+                /*%FSM<STATE "INIT">*/
+                class INIT
+                {
+                        name = "INIT";
+                        itemno = 0;
+                        init = /*%FSM<STATEINIT""">*/"[""framework\headless\balancer_lib.sqf"", {call compile preprocessFileLineNumbers _this}] remoteExec ['call', 0];" \n
+                         "" \n
+                         "  ////////////////////////////////" \n
+                         " // NO CLIENTS PAST THIS POINT //" \n
+                         "////////////////////////////////" \n
+                         "if ((not isServer) and (not isDedicated)) exitWith {};" \n
+                         "missionNamespace setVariable [""balancer_stats"",[]];" \n
+                         "_unitsBuffer       = (_this param [0,  6, [1]]);" \n
+                         "_cycleTime         = (_this param [1, 90, [1]]);" \n
+                         "_xferBuffer        = (_this param [2,  3, [1]]);" \n
+                         "_waitTime          = (_this param [3, 60, [1]]);" \n
+                         "_clear_server      = (_this param [4, false, [false]]);" \n
+                         "_sever_offload_con = (_this param [5, 3, [1]]);" \n
+                         "_iter              = 1;"/*%FSM</STATEINIT""">*/;
+                        precondition = /*%FSM<STATEPRECONDITION""">*/""/*%FSM</STATEPRECONDITION""">*/;
+                        class Links
+                        {
+                                /*%FSM<LINK "START_PAUSE">*/
+                                class START_PAUSE
+                                {
+                                        itemno = 1;
+                                        priority = 0.000000;
+                                        to="__RE_SET_VARIABL";
+                                        precondition = /*%FSM<CONDPRECONDITION""">*/""/*%FSM</CONDPRECONDITION""">*/;
+                                        condition=/*%FSM<CONDITION""">*/"(time > (0 + _waitTime))"/*%FSM</CONDITION""">*/;
+                                        action=/*%FSM<ACTION""">*/"_headlessClient_array = (missionNamespace getVariable ""HCs"");" \n
+                                         "[""[headless balancer] initializing..."", {systemChat _this }] remoteExec ['call',0];" \n
+                                         ""/*%FSM</ACTION""">*/;
+                                };
+                                /*%FSM</LINK>*/
+                        };
+                };
+                /*%FSM</STATE>*/
+                /*%FSM<STATE "__RE_SET_VARIABL">*/
+                class __RE_SET_VARIABL
+                {
+                        name = "__RE_SET_VARIABL";
+                        itemno = 2;
+                        init = /*%FSM<STATEINIT""">*/"_xfered       = false;" \n
+                         "_minHC        = """";" \n
+                         "_maxHC        = """";" \n
+                         "_minNodeCount = 100000;" \n
+                         "_maxNodeCount = 0;" \n
+                         "_node         = 0;" \n
+                         "" \n
+                         "  //////////////////" \n
+                         " // RESET COUNTS //" \n
+                         "//////////////////" \n
+                         "{" \n
+                         "    _node = (_x select 0);" \n
+                         "    _UnitsVarName  = (format [""%1_localUnits"", _node]);" \n
+                         "    _GroupsVarName = (format [""%1_localGroups"", _node]);" \n
+                         "    missionNamespace setVariable [_UnitsVarName, 0];" \n
+                         "    missionNamespace setVariable [_GroupsVarName, []];" \n
+                         "} forEach _headlessClient_array;" \n
+                         ""/*%FSM</STATEINIT""">*/;
+                        precondition = /*%FSM<STATEPRECONDITION""">*/""/*%FSM</STATEPRECONDITION""">*/;
+                        class Links
+                        {
+                                /*%FSM<LINK "CLEAR_SERVER">*/
+                                class CLEAR_SERVER
+                                {
+                                        itemno = 3;
+                                        priority = 2.000000;
+                                        to="LOCALITY_CHECK";
+                                        precondition = /*%FSM<CONDPRECONDITION""">*/""/*%FSM</CONDPRECONDITION""">*/;
+                                        condition=/*%FSM<CONDITION""">*/"(_clear_server)"/*%FSM</CONDITION""">*/;
+                                        action=/*%FSM<ACTION""">*/"missionNamespace setVariable [""server_localUnits"", 0];" \n
+                                         "missionNamespace setVariable [""server_localGroups"", []];" \n
+                                         "" \n
+                                         "if (_iter % _sever_offload_con == 0) then {" \n
+                                         "    _group_array = [];" \n
+                                         "    " \n
+                                         "    {" \n
+                                         "        _node  = 0;" \n
+                                         "        _group = _x;" \n
+                                         "        _hcId  = (groupOwner _group);" \n
+                                         "        _player_groups = [];" \n
+                                         "        " \n
+                                         "        {" \n
+                                         "            _player_group = _x;" \n
+                                         "            _player_groups set [(count _player_groups), (group _player_group)];" \n
+                                         "        } forEach playableUnits;" \n
+                                         "        " \n
+                                         "        if (_hcId == 2) then {" \n
+                                         "            if (not (_group in _player_groups)) then {" \n
+                                         "                _group_array set [(count _group_array), _group];" \n
+                                         "            };" \n
+                                         "        };" \n
+                                         "        " \n
+                                         "    } forEach allGroups;" \n
+                                         "    " \n
+                                         "    _groups_amount = (count _group_array);" \n
+                                         "    _index         = 0;" \n
+                                         "    " \n
+                                         "    if (_groups_amount > 0) then {" \n
+                                         "        while {_index < _groups_amount} do {" \n
+                                         "            {   " \n
+                                         "                ((_group_array select _index) setGroupOwner (_x select 1));" \n
+                                         "                _index = (_index + 1);" \n
+                                         "            } forEach _headlessClient_array;" \n
+                                         "" \n
+                                         "				 _xfertime = time;" \n
+                                         "				 while {(time < (_xfertime + _xferBuffer))} do" \n
+                                         "				 {" \n
+                                         "					 0;" \n
+                                         "				 };" \n
+                                         "        };" \n
+                                         "" \n
+                                         "        _stats = (missionNamespace getVariable ""balancer_stats"");" \n
+                                         "        _entry = (format [""offloaded %1 groups from server @ %2"", _groups_amount, time]);" \n
+                                         "        missionNamespace setVariable [""balancer_stats"", ([_entry, _stats] call fnc_array_to_front)];" \n
+                                         "    };" \n
+                                         "};" \n
+                                         ""/*%FSM</ACTION""">*/;
+                                };
+                                /*%FSM</LINK>*/
+                                /*%FSM<LINK "DONT_CLEAR">*/
+                                class DONT_CLEAR
+                                {
+                                        itemno = 8;
+                                        priority = 1.000000;
+                                        to="LOCALITY_CHECK";
+                                        precondition = /*%FSM<CONDPRECONDITION""">*/""/*%FSM</CONDPRECONDITION""">*/;
+                                        condition=/*%FSM<CONDITION""">*/""/*%FSM</CONDITION""">*/;
+                                        action=/*%FSM<ACTION""">*/""/*%FSM</ACTION""">*/;
+                                };
+                                /*%FSM</LINK>*/
+                        };
+                };
+                /*%FSM</STATE>*/
+                /*%FSM<STATE "LOCALITY_CHECK">*/
+                class LOCALITY_CHECK
+                {
+                        name = "LOCALITY_CHECK";
+                        itemno = 4;
+                        init = /*%FSM<STATEINIT""">*/"{" \n
+                         "    _node  = 0;" \n
+                         "    _group = _x;" \n
+                         "    _hcId  = (groupOwner _group);" \n
+                         "    " \n
+                         "    {" \n
+                         "        _hc_info = _x;" \n
+                         "        if (_hcId == (_hc_info select 1)) then {" \n
+                         "            _node = (_hc_info select 0);" \n
+                         "        };" \n
+                         "    } forEach _headlessClient_array;" \n
+                         "    " \n
+                         "    if ((groupOwner _x) == 2) then {" \n
+                         "        _node = ""server"";" \n
+                         "    };" \n
+                         "    " \n
+                         "    if ((not ([_node,0] call BIS_fnc_areEqual)) and (not ([_node,""server""] call BIS_fnc_areEqual))) then {" \n
+                         "        _UnitsVarName  = (format [""%1_localUnits"", _node]);" \n
+                         "        _GroupsVarName = (format [""%1_localGroups"", _node]);" \n
+                         "        _localUnits  = (missionNamespace getVariable _UnitsVarName);" \n
+                         "        _localGroups = (missionNamespace getVariable _GroupsVarName);" \n
+                         "" \n
+                         "        _grpSize    = (count (units _group));" \n
+                         "        _localUnits = (_localUnits + _grpSize);" \n
+                         "        _localGroups set [(count (_localGroups)), [_group, _grpSize]];" \n
+                         "" \n
+                         "        missionNamespace setVariable [_UnitsVarName, _localUnits];" \n
+                         "        missionNamespace setVariable [_GroupsVarName, _localGroups];" \n
+                         "    };" \n
+                         "} forEach allGroups;" \n
+                         "" \n
+                         "{" \n
+                         "    _varName        = (format [""%1_localUnits"", (_x select 0)]);" \n
+                         "    _currentHCunits = (missionNamespace getVariable _varName);" \n
+                         "" \n
+                         "    // least" \n
+                         "    if (_currentHCunits < _minNodeCount) then {" \n
+                         "        _minNodeCount = _currentHCunits;" \n
+                         "        _minHC = _x;" \n
+                         "    };" \n
+                         "" \n
+                         "    // most" \n
+                         "    if (_currentHCunits > _maxNodeCount) then {" \n
+                         "        _maxNodeCount = _currentHCunits;" \n
+                         "        _maxHC = _x;" \n
+                         "    };" \n
+                         "} forEach _headlessClient_array;" \n
+                         "" \n
+                         "_xferedNum  = 0;" \n
+                         "_differance = (floor ((_maxNodeCount - _minNodeCount)/2));" \n
+                         "" \n
+                         ""/*%FSM</STATEINIT""">*/;
+                        precondition = /*%FSM<STATEPRECONDITION""">*/""/*%FSM</STATEPRECONDITION""">*/;
+                        class Links
+                        {
+                                /*%FSM<LINK "XFER">*/
+                                class XFER
+                                {
+                                        itemno = 5;
+                                        priority = 2.000000;
+                                        to="XFER_INIT";
+                                        precondition = /*%FSM<CONDPRECONDITION""">*/""/*%FSM</CONDPRECONDITION""">*/;
+                                        condition=/*%FSM<CONDITION""">*/"(_differance >= _unitsBuffer)"/*%FSM</CONDITION""">*/;
+                                        action=/*%FSM<ACTION""">*/"_varName      = (format [""%1_localGroups"", (_maxHC select 0)]);" \n
+                                         "_maxHCGroups  = (missionNamespace getVariable _varName);" \n
+                                         "_xfered       = true;" \n
+                                         ""/*%FSM</ACTION""">*/;
+                                };
+                                /*%FSM</LINK>*/
+                                /*%FSM<LINK "NO_XFER">*/
+                                class NO_XFER
+                                {
+                                        itemno = 9;
+                                        priority = 1.000000;
+                                        to="___ITER";
+                                        precondition = /*%FSM<CONDPRECONDITION""">*/""/*%FSM</CONDPRECONDITION""">*/;
+                                        condition=/*%FSM<CONDITION""">*/""/*%FSM</CONDITION""">*/;
+                                        action=/*%FSM<ACTION""">*/""/*%FSM</ACTION""">*/;
+                                };
+                                /*%FSM</LINK>*/
+                        };
+                };
+                /*%FSM</STATE>*/
+                /*%FSM<STATE "___ITER">*/
+                class ___ITER
+                {
+                        name = "___ITER";
+                        itemno = 6;
+                        init = /*%FSM<STATEINIT""">*/"_iter = (_iter + 1);" \n
+                         "_ctime = time;" \n
+                         ""/*%FSM</STATEINIT""">*/;
+                        precondition = /*%FSM<STATEPRECONDITION""">*/""/*%FSM</STATEPRECONDITION""">*/;
+                        class Links
+                        {
+                                /*%FSM<LINK "CYCLE_WAIT">*/
+                                class CYCLE_WAIT
+                                {
+                                        itemno = 7;
+                                        priority = 0.000000;
+                                        to="__RE_SET_VARIABL";
+                                        precondition = /*%FSM<CONDPRECONDITION""">*/""/*%FSM</CONDPRECONDITION""">*/;
+                                        condition=/*%FSM<CONDITION""">*/"(time > (_ctime + _cycleTime))"/*%FSM</CONDITION""">*/;
+                                        action=/*%FSM<ACTION""">*/""/*%FSM</ACTION""">*/;
+                                };
+                                /*%FSM</LINK>*/
+                        };
+                };
+                /*%FSM</STATE>*/
+                /*%FSM<STATE "XFER_INIT">*/
+                class XFER_INIT
+                {
+                        name = "XFER_INIT";
+                        itemno = 10;
+                        init = /*%FSM<STATEINIT""">*/"_noGroupFits = true;" \n
+                         ""/*%FSM</STATEINIT""">*/;
+                        precondition = /*%FSM<STATEPRECONDITION""">*/""/*%FSM</STATEPRECONDITION""">*/;
+                        class Links
+                        {
+                                /*%FSM<LINK "ROOM_FOR_XFERING">*/
+                                class ROOM_FOR_XFERING
+                                {
+                                        itemno = 11;
+                                        priority = 2.000000;
+                                        to="XFER_GROUPS";
+                                        precondition = /*%FSM<CONDPRECONDITION""">*/""/*%FSM</CONDPRECONDITION""">*/;
+                                        condition=/*%FSM<CONDITION""">*/"(_differance > 2)"/*%FSM</CONDITION""">*/;
+                                        action=/*%FSM<ACTION""">*/""/*%FSM</ACTION""">*/;
+                                };
+                                /*%FSM</LINK>*/
+                                /*%FSM<LINK "NO_MORE_ROOM">*/
+                                class NO_MORE_ROOM
+                                {
+                                        itemno = 14;
+                                        priority = 1.000000;
+                                        to="___ITER";
+                                        precondition = /*%FSM<CONDPRECONDITION""">*/""/*%FSM</CONDPRECONDITION""">*/;
+                                        condition=/*%FSM<CONDITION""">*/""/*%FSM</CONDITION""">*/;
+                                        action=/*%FSM<ACTION""">*/"_stats = (missionNamespace getVariable ""balancer_stats"");" \n
+                                         "if ((count _stats) > 10) then {" \n
+                                         "    _stats resize 5;" \n
+                                         "};" \n
+                                         "" \n
+                                         "_entry = (format [""cycle %1 complete @ %2 | Xfered %3 to %4"", _iter, time, _xferedNum, (_minHC select 0)]);" \n
+                                         "" \n
+                                         "_varName_min_hc = (format [""%1_localUnits"", (_minHC select 0)]);" \n
+                                         "_updated_count_min_hc = ((missionNamespace getVariable _varName_min_hc) + _xferedNum);" \n
+                                         "missionNamespace setVariable [_varName_min_hc, _updated_count_min_hc];" \n
+                                         "" \n
+                                         "_varName_max_hc = (format [""%1_localUnits"", (_maxHC select 0)]);" \n
+                                         "_updated_count_max_hc = ((missionNamespace getVariable _varName_max_hc) - _xferedNum);" \n
+                                         "missionNamespace setVariable [_varName_max_hc, _updated_count_max_hc];" \n
+                                         "" \n
+                                         "missionNamespace setVariable [""balancer_stats"", ([_entry, _stats] call fnc_array_to_front)];" \n
+                                         "_stats = (missionNamespace getVariable ""balancer_stats"");" \n
+                                         "if ((count _stats) > 10) then {" \n
+                                         "    _stats resize 5;" \n
+                                         "};" \n
+                                         "" \n
+                                         "_entry = (format [""cycle %1 complete @ %2 | Xfered %3 to %4"", _iter, time, _xferedNum, (_minHC select 0)]);" \n
+                                         "" \n
+                                         "_varName_min_hc = (format [""%1_localUnits"", (_minHC select 0)]);" \n
+                                         "_updated_count_min_hc = ((missionNamespace getVariable _varName_min_hc) + _xferedNum);" \n
+                                         "missionNamespace setVariable [_varName_min_hc, _updated_count_min_hc];" \n
+                                         "" \n
+                                         "_varName_max_hc = (format [""%1_localUnits"", (_maxHC select 0)]);" \n
+                                         "_updated_count_max_hc = ((missionNamespace getVariable _varName_max_hc) - _xferedNum);" \n
+                                         "missionNamespace setVariable [_varName_max_hc, _updated_count_max_hc];" \n
+                                         "" \n
+                                         "missionNamespace setVariable [""balancer_stats"", ([_entry, _stats] call fnc_array_to_front)];" \n
+                                         ""/*%FSM</ACTION""">*/;
+                                };
+                                /*%FSM</LINK>*/
+                        };
+                };
+                /*%FSM</STATE>*/
+                /*%FSM<STATE "XFER_GROUPS">*/
+                class XFER_GROUPS
+                {
+                        name = "XFER_GROUPS";
+                        itemno = 12;
+                        init = /*%FSM<STATEINIT""">*/"" \n
+                         "{" \n
+                         "    if ((_x select 1) <= _differance) then {" \n
+                         "        _leader = (leader (_x select 0));" \n
+                         "        if ((!isNull (_x select 0)) && (!isPlayer _leader) && (alive _leader)) then {" \n
+                         "            (_x select 0) setGroupOwner (_minHC select 1);" \n
+                         "" \n
+                         "	 _xfertime = time;" \n
+                         "	 while {(time < (_xfertime + _xferBuffer))} do" \n
+                         "	 {" \n
+                         "		 0;" \n
+                         "	 };" \n
+                         "" \n
+                         "            _xferedNum   = _xferedNum + (_x select 1);" \n
+                         "            _differance  = _differance - (_x select 1);" \n
+                         "            _noGroupFits = false;" \n
+                         "        };" \n
+                         "    };" \n
+                         "} forEach _maxHCGroups;" \n
+                         "" \n
+                         "if (_noGroupFits) then {" \n
+                         "    _differance = _differance - 1;" \n
+                         "};"/*%FSM</STATEINIT""">*/;
+                        precondition = /*%FSM<STATEPRECONDITION""">*/""/*%FSM</STATEPRECONDITION""">*/;
+                        class Links
+                        {
+                                /*%FSM<LINK "TRUE">*/
+                                class TRUE
+                                {
+                                        itemno = 13;
+                                        priority = 0.000000;
+                                        to="XFER_INIT";
+                                        precondition = /*%FSM<CONDPRECONDITION""">*/""/*%FSM</CONDPRECONDITION""">*/;
+                                        condition=/*%FSM<CONDITION""">*/""/*%FSM</CONDITION""">*/;
+                                        action=/*%FSM<ACTION""">*/""/*%FSM</ACTION""">*/;
+                                };
+                                /*%FSM</LINK>*/
+                        };
+                };
+                /*%FSM</STATE>*/
+        };
+        initState="INIT";
+        finalStates[] =
+        {
+        };
+};
+/*%FSM</COMPILE>*/
